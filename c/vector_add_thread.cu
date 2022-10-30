@@ -6,18 +6,20 @@
 #include <cuda_runtime.h>
 #include <time.h>
 
-#define N 10000000
+#define N 100000000
 #define MAX_ERR 1e-6
 
 __global__ void vector_add(float *out, float *a, float *b, int n) {
-	// blockIdx.x contains the index of the block with in the grid 
-	// gridDim.x contains the size of the grid
+	// inside a block
 	// threadIdx.x contains the index of the thread within the block
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    // Handling arbitrary vector size
-    if (tid < n){
-        out[tid] = a[tid] + b[tid];
+	// blockDim.x contains the size of thread block (number of threads in the thread block)
+	//  threadIdx.x
+	// --   256   -- | -- 256 --| -- blockDim.x -- | ...
+    int index = threadIdx.x;
+    int stride = blockDim.x;
+
+    for(int i = index; i < n; i += stride){
+        out[i] = a[i] + b[i];
     }
 }
 
@@ -41,26 +43,26 @@ int main(){
     cudaMalloc((void**)&d_b, sizeof(float) * N);
     cudaMalloc((void**)&d_out, sizeof(float) * N);
 
+	clock_t begin = clock();
+
     // Transfer data from host to device memory
     cudaMemcpy(d_a, a, sizeof(float) * N, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, b, sizeof(float) * N, cudaMemcpyHostToDevice);
 
-	clock_t begin = clock();
-
     // Executing kernel 
-    int block_size = 256;
-    int grid_size = ((N + block_size) / block_size);
 	// <<<M,T>>>:
 	// M: a grid of M thread blocks
 	// T: each thread block has T parallel threads
-    vector_add<<<grid_size,block_size>>>(d_out, d_a, d_b, N);
+    vector_add<<<1,256>>>(d_out, d_a, d_b, N);
     
     // Transfer data back to host memory
     cudaMemcpy(out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
 
+
 	clock_t end = clock();
 	double time_spent = (double)(end-begin)/CLOCKS_PER_SEC;
 	printf("Time: %f s\n", time_spent);
+	printf("Out: %f \n", out[0]);
 
     // Verification
     for(int i = 0; i < N; i++){

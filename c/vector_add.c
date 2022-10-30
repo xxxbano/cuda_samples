@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define N 10000000
+#define N 100000000
 
 void vector_add(float *out, float *a, float *b, int n) {
 	for(int i = 0; i < n; i++){
@@ -31,6 +31,7 @@ int main(){
 	clock_t end = clock();
 	double time_spent = (double)(end-begin)/CLOCKS_PER_SEC;
 	printf("Time: %f s\n", time_spent);
+	printf("Out: %f \n", out[0]);
 	// Deallocate device memory
 	free(a);
 	free(b);
